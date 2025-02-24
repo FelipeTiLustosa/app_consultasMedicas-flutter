@@ -3,7 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 
 class AuthService {
-  static const String _userKey = 'user_data';
+  static const String _usersKey = 'users_data';
+  static const String _currentUserKey = 'current_user';
   static User? _currentUser;
 
   // Get current logged in user
@@ -12,9 +13,9 @@ class AuthService {
   // Initialize the auth service
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
-    if (userData != null) {
-      _currentUser = User.fromJson(jsonDecode(userData));
+    final currentUserData = prefs.getString(_currentUserKey);
+    if (currentUserData != null) {
+      _currentUser = User.fromJson(jsonDecode(currentUserData));
     }
   }
 
@@ -24,12 +25,11 @@ class AuthService {
   // Check if email is already registered
   static Future<bool> isEmailRegistered(String email) async {
     final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
-    if (userData != null) {
-      final existingUser = User.fromJson(jsonDecode(userData));
-      return existingUser.email == email;
-    }
-    return false;
+    final usersData = prefs.getStringList(_usersKey) ?? [];
+    return usersData.any((userData) {
+      final user = User.fromJson(jsonDecode(userData));
+      return user.email == email;
+    });
   }
 
   // Validate doctor authentication code
@@ -71,7 +71,12 @@ class AuthService {
 
     // Save user data
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userKey, jsonEncode(user.toJson()));
+    final usersData = prefs.getStringList(_usersKey) ?? [];
+    usersData.add(jsonEncode(user.toJson()));
+    await prefs.setStringList(_usersKey, usersData);
+    
+    // Set as current user
+    await prefs.setString(_currentUserKey, jsonEncode(user.toJson()));
     _currentUser = user;
 
     return user;
@@ -79,14 +84,14 @@ class AuthService {
 
   // Login user
   static Future<User> login(String email, String password) async {
-    // In a real app, this would verify credentials against an API
-    // For now, we'll just check if the user exists locally
     final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
+    final usersData = prefs.getStringList(_usersKey) ?? [];
     
-    if (userData != null) {
+    for (var userData in usersData) {
       final user = User.fromJson(jsonDecode(userData));
       if (user.email == email) {
+        // Save current user
+        await prefs.setString(_currentUserKey, userData);
         _currentUser = user;
         return user;
       }
@@ -98,7 +103,7 @@ class AuthService {
   // Logout user
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_userKey);
+    await prefs.remove(_currentUserKey);
     _currentUser = null;
   }
 }

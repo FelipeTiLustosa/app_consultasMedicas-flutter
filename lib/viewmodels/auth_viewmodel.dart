@@ -12,17 +12,10 @@ class AuthViewModel extends ChangeNotifier {
   String? get error => _error;
   bool get isLoggedIn => _currentUser != null;
 
-  Future<void> initialize() async {
-    _setLoading(true);
-    try {
-      await AuthService.init();
-      _currentUser = AuthService.currentUser;
-      _error = null;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _setLoading(false);
-    }
+  Future<void> initAuth() async {
+    await AuthService.init();
+    _currentUser = AuthService.currentUser;
+    notifyListeners();
   }
 
   Future<bool> register({
