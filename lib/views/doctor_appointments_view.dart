@@ -5,6 +5,8 @@ import '../models/appointment.dart';
 import '../models/user.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../services/appointment_service.dart';
+import '../services/user_service.dart';
+import './statistics_view.dart';
 
 class DoctorAppointmentsView extends StatefulWidget {
   const DoctorAppointmentsView({super.key});
@@ -56,9 +58,21 @@ class _DoctorAppointmentsViewState extends State<DoctorAppointmentsView> with Si
           _buildAppointmentsList('cancelled', currentUser),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showStatistics(context, currentUser),
-        child: const Icon(Icons.analytics),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () => _createAppointment(context, currentUser),
+            heroTag: 'createAppointment',
+            child: const Icon(Icons.add),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: () => _showStatistics(context, currentUser),
+            heroTag: 'showStatistics',
+            child: const Icon(Icons.analytics),
+          ),
+        ],
       ),
     );
   }
@@ -84,72 +98,59 @@ class _DoctorAppointmentsViewState extends State<DoctorAppointmentsView> with Si
       itemCount: appointments.length,
       itemBuilder: (context, index) {
         final appointment = appointments[index];
+        return _buildAppointmentItem(appointment);
+      },
+    );
+  }
+
+  Widget _buildAppointmentItem(Appointment appointment) {
+    return FutureBuilder<User?>(
+      future: UserService.getUser(appointment.patientId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        }
+        if (!snapshot.hasData) {
+          return const Text('Erro ao carregar dados do paciente');
+        }
+
+        final patient = snapshot.data!;
         return Card(
           margin: const EdgeInsets.all(8.0),
           child: ListTile(
-            title: Text('Paciente: ${appointment.patientId}'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            title: Text(patient.name),
+            subtitle: Text(_dateFormat.format(appointment.dateTime)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Data: ${_dateFormat.format(appointment.dateTime)}'),
-                if (appointment.notes != null)
-                  Text('Observações: ${appointment.notes}'),
-                Text('Anexos: ${appointment.attachments.length}'),
+                if (appointment.status == 'scheduled') ...[                  
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _editAppointment(context, appointment),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.cancel),
+                    onPressed: () => _cancelAppointment(context, appointment),
+                  ),
+                ],
               ],
             ),
-            trailing: status == 'scheduled'
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check),
-                        onPressed: () => _completeAppointment(appointment),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel),
-                        onPressed: () => _cancelAppointment(appointment),
-                      ),
-                    ],
-                  )
-                : null,
-            onTap: () => _showAppointmentDetails(appointment),
           ),
         );
       },
     );
   }
 
-  Future<void> _completeAppointment(Appointment appointment) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar Conclusão'),
-        content: const Text('Deseja marcar esta consulta como concluída?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await AppointmentService.updateAppointmentStatus(appointment.id, 'completed');
-      setState(() {});
-    }
+  Future<void> _editAppointment(BuildContext context, Appointment appointment) async {
+    // Implement edit appointment logic
   }
 
-  Future<void> _cancelAppointment(Appointment appointment) async {
+  Future<void> _cancelAppointment(BuildContext context, Appointment appointment) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar Cancelamento'),
-        content: const Text('Deseja cancelar esta consulta?'),
+        content: const Text('Deseja realmente cancelar esta consulta?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -161,77 +162,23 @@ class _DoctorAppointmentsViewState extends State<DoctorAppointmentsView> with Si
           ),
         ],
       ),
-    );
+    ) ?? false;
 
-    if (confirmed == true) {
+    if (confirmed) {
       await AppointmentService.cancelAppointment(appointment.id);
       setState(() {});
     }
   }
 
-  void _showAppointmentDetails(Appointment appointment) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalhes da Consulta'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Paciente: ${appointment.patientId}'),
-              Text('Data: ${_dateFormat.format(appointment.dateTime)}'),
-              Text('Status: ${appointment.status}'),
-              if (appointment.notes != null)
-                Text('Observações: ${appointment.notes}'),
-              const SizedBox(height: 16),
-              if (appointment.attachments.isNotEmpty) ...[  
-                const Text('Anexos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...appointment.attachments.map((path) => Text('- $path')),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _createAppointment(BuildContext context, User doctor) async {
+    // Implement create appointment logic
   }
 
   void _showStatistics(BuildContext context, User doctor) {
-    final stats = AppointmentService.getDoctorStatistics(doctor.id);
-    final mostCommonHour = stats['appointmentsByHour'].entries
-        .reduce((a, b) => a.value > b.value ? a : b)
-        .key;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Estatísticas'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Total de consultas: ${stats['totalAppointments']}'),
-            const SizedBox(height: 8),
-            Text('Agendadas: ${stats['appointmentsByStatus']['scheduled']}'),
-            Text('Concluídas: ${stats['appointmentsByStatus']['completed']}'),
-            Text('Canceladas: ${stats['appointmentsByStatus']['cancelled']}'),
-            const SizedBox(height: 8),
-            Text('Horário mais comum: ${mostCommonHour}:00'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StatisticsView(doctor: doctor),
       ),
     );
   }

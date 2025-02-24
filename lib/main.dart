@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/appointment_viewmodel.dart';
 import 'views/login_view.dart';
+import 'views/splash_view.dart';
 
 void main() {
   runApp(
@@ -34,7 +35,7 @@ class MyApp extends StatelessWidget {
         useInheritedMediaQuery: true,
         locale: DevicePreview.locale(context),
         builder: DevicePreview.appBuilder,
-        home: const LoginView(),
+        home: const SplashView(),
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../viewmodels/appointment_viewmodel.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
@@ -17,11 +19,27 @@ class _DoctorPatientsViewState extends State<DoctorPatientsView> {
   final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
   Map<String, User> _patients = {};
 
+  Future<void> _loadPatients() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersData = prefs.getStringList('users_data') ?? [];
+    
+    setState(() {
+      _patients = {};
+      for (var userData in usersData) {
+        final user = User.fromJson(jsonDecode(userData));
+        if (!user.isDoctor) {
+          _patients[user.id] = user;
+        }
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAppointments();
+      _loadPatients();
     });
   }
 
@@ -140,11 +158,19 @@ class _DoctorPatientsViewState extends State<DoctorPatientsView> {
                 (a, b) => a.dateTime.isAfter(b.dateTime) ? a : b,
               );
 
+              final patient = _patients[patientId];
+              if (patient == null) return const SizedBox.shrink();
+
               return Card(
                 child: ExpansionTile(
-                  title: Text(lastAppointment.patientId),
-                  subtitle: Text(
-                    'Última consulta: ${dateFormat.format(lastAppointment.dateTime)}',
+                  title: Text(patient.name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Email: ${patient.email}'),
+                      Text('Telefone: ${patient.phoneNumber}'),
+                      Text('Última consulta: ${dateFormat.format(lastAppointment.dateTime)}'),
+                    ],
                   ),
                   children: patientAppointmentList.map((appointment) {
                     return ListTile(

@@ -21,6 +21,7 @@ class _RegisterViewState extends State<RegisterView> {
   final _authCodeController = TextEditingController();
   DateTime? _selectedDate;
   bool _isDoctor = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -36,9 +37,19 @@ class _RegisterViewState extends State<RegisterView> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: DateTime.now().subtract(const Duration(days: 6570)), // 18 years ago
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -61,7 +72,6 @@ class _RegisterViewState extends State<RegisterView> {
           );
 
       if (success && mounted) {
-        // Show success dialog
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -76,12 +86,58 @@ class _RegisterViewState extends State<RegisterView> {
           ),
         );
 
-        // Navigate back to login screen
         if (mounted) {
-          Navigator.of(context).pop(); // This will take user back to login screen
+          Navigator.of(context).pop();
         }
+      } else if (mounted) {
+        final error = context.read<AuthViewModel>().error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error ?? 'Erro ao realizar cadastro'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
+    } else if (_selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, selecione sua data de nascimento'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
+  }
+
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          suffixIcon: suffixIcon,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        validator: validator,
+      ),
+    );
   }
 
   @override
@@ -89,158 +145,201 @@ class _RegisterViewState extends State<RegisterView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cadastro'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).primaryColor,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome completo',
-                    border: OutlineInputBorder(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).primaryColor.withOpacity(0.1),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    Icons.person_add_rounded,
+                    size: 64,
+                    color: Theme.of(context).primaryColor,
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu nome';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefone',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Criar Conta',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                    textAlign: TextAlign.center,
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu telefone';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Por favor, insira um email válido';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Data de Nascimento'),
-                  subtitle: Text(
-                    _selectedDate == null
-                        ? 'Selecione uma data'
-                        : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-                  ),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: _selectDate,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Senha',
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira sua senha';
-                    }
-                    if (value.length < 6) {
-                      return 'A senha deve ter pelo menos 6 caracteres';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Sou médico'),
-                  value: _isDoctor,
-                  onChanged: (bool value) {
-                    setState(() {
-                      _isDoctor = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (_isDoctor) ...[  
-                  TextFormField(
-                    controller: _specializationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Especialização',
-                      border: OutlineInputBorder(),
-                    ),
+                  const SizedBox(height: 32),
+                  _buildFormField(
+                    controller: _nameController,
+                    label: 'Nome completo',
+                    icon: Icons.person_outline,
                     validator: (value) {
-                      if (_isDoctor && (value == null || value.isEmpty)) {
-                        return 'Por favor, insira sua especialização';
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, insira seu nome';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _authCodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Código de Autenticação',
-                      border: OutlineInputBorder(),
-                    ),
+                  _buildFormField(
+                    controller: _phoneController,
+                    label: 'Telefone',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
                     validator: (value) {
-                      if (_isDoctor && (value == null || value.isEmpty)) {
-                        return 'Por favor, insira o código de autenticação';
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, insira seu telefone';
                       }
                       return null;
+                    },
+                  ),
+                  _buildFormField(
+                    controller: _emailController,
+                    label: 'Email',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, insira seu email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Por favor, insira um email válido';
+                      }
+                      return null;
+                    },
+                  ),
+                  _buildFormField(
+                    controller: _passwordController,
+                    label: 'Senha',
+                    icon: Icons.lock_outline,
+                    obscureText: _obscurePassword,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, insira sua senha';
+                      }
+                      if (value.length < 6) {
+                        return 'A senha deve ter pelo menos 6 caracteres';
+                      }
+                      return null;
+                    },
+                  ),
+                  Card(
+                    elevation: 0,
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      leading: const Icon(Icons.calendar_today_outlined),
+                      title: const Text('Data de Nascimento'),
+                      subtitle: Text(
+                        _selectedDate == null
+                            ? 'Selecione uma data'
+                            : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                      ),
+                      onTap: _selectDate,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    child: SwitchListTile(
+                      title: const Text('Sou médico'),
+                      value: _isDoctor,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _isDoctor = value;
+                        });
+                      },
+                    ),
+                  ),
+                  if (_isDoctor) ...[  
+                    const SizedBox(height: 16),
+                    _buildFormField(
+                      controller: _specializationController,
+                      label: 'Especialização',
+                      icon: Icons.medical_services_outlined,
+                      validator: (value) {
+                        if (_isDoctor && (value == null || value.isEmpty)) {
+                          return 'Por favor, insira sua especialização';
+                        }
+                        return null;
+                      },
+                    ),
+                    _buildFormField(
+                      controller: _authCodeController,
+                      label: 'Código de Autorização',
+                      icon: Icons.verified_outlined,
+                      validator: (value) {
+                        if (_isDoctor && (value == null || value.isEmpty)) {
+                          return 'Por favor, insira o código de autorização';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Consumer<AuthViewModel>(
+                    builder: (context, authVM, child) {
+                      return ElevatedButton(
+                        onPressed: authVM.isLoading ? null : _register,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: authVM.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Cadastrar',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                      );
                     },
                   ),
                 ],
-                const SizedBox(height: 24),
-                Consumer<AuthViewModel>(
-                  builder: (context, authVM, child) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ElevatedButton(
-                          onPressed: authVM.isLoading ? null : _register,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: authVM.isLoading
-                                ? const CircularProgressIndicator()
-                                : const Text('Cadastrar'),
-                          ),
-                        ),
-                        if (authVM.error != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(
-                              authVM.error!,
-                              style: const TextStyle(color: Colors.red),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
           ),
         ),

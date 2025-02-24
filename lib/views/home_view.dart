@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/appointment_viewmodel.dart';
 import '../models/appointment.dart';
+import '../models/user.dart';
 import 'login_view.dart';
 import 'doctor_appointments_view.dart';
 import 'doctor_patients_view.dart';
@@ -143,12 +146,54 @@ class _HomeViewState extends State<HomeView> {
                 context,
                 'Agendar Consulta',
                 Icons.add_circle_outline,
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ScheduleAppointmentView(doctor: user),
-                  ),
-                ),
+                () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final usersData = prefs.getStringList('users_data') ?? [];
+                  final doctors = usersData
+                      .map((userData) => User.fromJson(jsonDecode(userData)))
+                      .where((user) => user.isDoctor)
+                      .toList();
+
+                  if (mounted) {
+                    if (doctors.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Não há médicos disponíveis no momento.')),
+                      );
+                      return;
+                    }
+
+                    final selectedDoctor = await showDialog<User>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Selecione um Médico'),
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: doctors.length,
+                            itemBuilder: (context, index) {
+                              final doctor = doctors[index];
+                              return ListTile(
+                                title: Text(doctor.name),
+                                subtitle: Text(doctor.specialization ?? ''),
+                                onTap: () => Navigator.of(context).pop(doctor),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+
+                    if (selectedDoctor != null && mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ScheduleAppointmentView(doctor: selectedDoctor),
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
             ],
           ],
