@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "388887508652",
+    "project_id": "loginapp-ab2e2",
+    "storage_bucket": "loginapp-ab2e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388887508652:android:e1e3239682d41f1aea1109",
+        "android_client_info": {
+          "package_name": "com.example.app_consultas_medicas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "388887508652-m34t87figokdk5kd26c5ralegvc50iem.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBAeFbO6mfI8O0aABx2lmRiFlqOBYcwpw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "388887508652-m34t87figokdk5kd26c5ralegvc50iem.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
