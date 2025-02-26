@@ -24,8 +24,7 @@ class DoctorAvailabilityService {
     return _availabilities
         .where((availability) => 
             availability.doctorId == doctorId && 
-            availability.endTime.isAfter(DateTime.now()) &&
-            availability.isAvailable)
+            availability.endTime.isAfter(DateTime.now()))
         .toList();
   }
 

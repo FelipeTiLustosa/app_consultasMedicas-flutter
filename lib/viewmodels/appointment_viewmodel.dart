@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/appointment_service.dart';
+import '../services/doctor_availability_service.dart';
 import '../models/appointment.dart';
 
 class AppointmentViewModel extends ChangeNotifier {
@@ -42,8 +43,20 @@ class AppointmentViewModel extends ChangeNotifier {
     _error = null;
 
     try {
+      // Check if the time slot is available
       if (!AppointmentService.isTimeSlotAvailable(doctorId, dateTime)) {
-        _error = 'This time slot is not available';
+        _error = 'Este horário já está ocupado';
+        notifyListeners();
+        return false;
+      }
+
+      // Check if there is a doctor availability for this time slot
+      final doctorAvailabilities = await DoctorAvailabilityService.getDoctorAvailabilities(doctorId);
+      final isAvailable = doctorAvailabilities.any((availability) =>
+          availability.startTime.isAtSameMomentAs(dateTime) && availability.isAvailable);
+
+      if (!isAvailable) {
+        _error = 'Este horário não está disponível para agendamento';
         notifyListeners();
         return false;
       }

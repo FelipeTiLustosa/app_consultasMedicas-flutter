@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/appointment_viewmodel.dart';
+import 'viewmodels/doctor_availability_viewmodel.dart';
 import 'views/login_view.dart';
 import 'views/splash_view.dart';
 
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => AppointmentViewModel()),
+        ChangeNotifierProvider(create: (_) => DoctorAvailabilityViewModel()),
       ],
       child: MaterialApp(
         title: 'Consultas Médicas',

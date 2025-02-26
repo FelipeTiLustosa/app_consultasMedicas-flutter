@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/appointment.dart';
 import '../models/user.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../services/appointment_service.dart';
+import '../services/user_service.dart';
+import '../views/schedule_appointment_view.dart';
 
 class PatientAppointmentsView extends StatefulWidget {
   const PatientAppointmentsView({super.key});
@@ -29,6 +32,25 @@ class _PatientAppointmentsViewState extends State<PatientAppointmentsView> with 
     super.dispose();
   }
 
+  void _openFile(String filePath) async {
+    final url = Uri.parse(filePath);
+    try {
+      if (!await launchUrl(url)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Não foi possível abrir o arquivo')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao abrir o arquivo')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthViewModel>().currentUser;
@@ -42,7 +64,7 @@ class _PatientAppointmentsViewState extends State<PatientAppointmentsView> with 
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Agendadas'),
+            Tab(text: 'Próximas'),
             Tab(text: 'Concluídas'),
             Tab(text: 'Canceladas'),
           ],
@@ -86,99 +108,90 @@ class _PatientAppointmentsViewState extends State<PatientAppointmentsView> with 
         final appointment = appointments[index];
         return Card(
           margin: const EdgeInsets.all(8.0),
-          child: ListTile(
-            title: Text('Médico: ${appointment.doctorId}'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Data: ${_dateFormat.format(appointment.dateTime)}'),
-                if (appointment.notes != null)
-                  Text('Observações: ${appointment.notes}'),
-                Text('Anexos: ${appointment.attachments.length}'),
-              ],
+          child: ExpansionTile(
+            title: FutureBuilder<User?>(
+              future: UserService.getUser(appointment.doctorId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Text('Carregando...');
+                }
+                final doctor = snapshot.data;
+                return Text('Médico: ${doctor?.name ?? 'Não encontrado'}');
+              },
             ),
-            trailing: status == 'scheduled'
-                ? IconButton(
-                    icon: const Icon(Icons.attach_file),
-                    onPressed: () => _addAttachment(appointment),
-                  )
-                : null,
-            onTap: () => _showAppointmentDetails(appointment),
+            subtitle: Text('Data: ${_dateFormat.format(appointment.dateTime)}'),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (appointment.notes != null) ...[                      
+                      Text('Observações:', style: Theme.of(context).textTheme.titleSmall),
+                      Text(appointment.notes!),
+                      const SizedBox(height: 8),
+                    ],
+                    if (appointment.attachments.isNotEmpty) ...[                      
+                      Text('Documentos:', style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        children: appointment.attachments.map((filePath) {
+                          return Chip(
+                            label: Text(filePath.split('/').last),
+                            onDeleted: () => _openFile(filePath),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    if (status == 'scheduled')
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Cancelar Consulta'),
+                                  content: const Text('Deseja realmente cancelar esta consulta?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('Não'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: const Text('Sim'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmed == true) {
+                                await AppointmentService.cancelAppointment(appointment.id);
+                                setState(() {});
+                              }
+                            },
+                            child: const Text('Cancelar Consulta'),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  void _showAppointmentDetails(Appointment appointment) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalhes da Consulta'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Médico: ${appointment.doctorId}'),
-              Text('Data: ${_dateFormat.format(appointment.dateTime)}'),
-              Text('Status: ${appointment.status}'),
-              if (appointment.notes != null)
-                Text('Observações: ${appointment.notes}'),
-              const SizedBox(height: 16),
-              if (appointment.attachments.isNotEmpty) ...[  
-                const Text('Anexos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...appointment.attachments.map((path) => Text('- $path')),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _addAttachment(Appointment appointment) async {
-    // In a real app, this would use a file picker and upload to storage
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Adicionar Anexo'),
-        content: const Text('Em uma versão completa, aqui você poderia selecionar um arquivo para anexar à consulta.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      await AppointmentService.addAttachment(appointment.id, result);
-      setState(() {});
-    }
-  }
-
-  Future<void> _showScheduleAppointment(BuildContext context, User patient) async {
-    // In a real app, this would show a form to select doctor, date, and time
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agendar Consulta'),
-        content: const Text('Em uma versão completa, aqui você poderia selecionar um médico e horário disponível para agendar uma consulta.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fechar'),
-          ),
-        ],
+  void _showScheduleAppointment(BuildContext context, User patient) {
+    // Navigate to schedule appointment view
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ScheduleAppointmentView(doctor: patient),
       ),
     );
   }

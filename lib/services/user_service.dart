@@ -40,4 +40,14 @@ class UserService {
     
     await prefs.setStringList(_usersKey, usersData);
   }
+
+  static Future<List<User>> getAllPatients() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usersData = prefs.getStringList(_usersKey) ?? [];
+    
+    return usersData
+        .map((data) => User.fromJson(jsonDecode(data)))
+        .where((user) => !user.isDoctor)
+        .toList();
+  }
 }

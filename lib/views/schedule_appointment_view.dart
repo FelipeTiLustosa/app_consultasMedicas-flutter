@@ -85,7 +85,6 @@ class _ScheduleAppointmentViewState extends State<ScheduleAppointmentView> {
           );
 
       if (success && mounted) {
-        // Atualizar a disponibilidade do médico
         await context.read<DoctorAvailabilityViewModel>().updateAvailability(
               availabilityId: availability.id,
               isAvailable: false,
@@ -94,7 +93,7 @@ class _ScheduleAppointmentViewState extends State<ScheduleAppointmentView> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Consulta agendada com sucesso!')),
         );
-        Navigator.of(context).pop(); // Voltar para a tela anterior
+        Navigator.of(context).pop();
       }
     }
   }
