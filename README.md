@@ -93,8 +93,8 @@ Contribuições são bem-vindas! Para contribuir com o projeto:
 ## 7. Imagens do Projeto:
 <p align="center">
   <img src="https://github.com/user-attachments/assets/67bc9bc5-dbe2-4c83-bac1-7d518d11fc66" alt="Captura de tela 2025-02-26 172506" width="280" style="margin-right:10px;">
-  <img src="https://github.com/user-attachments/assets/f43d5a96-7159-4374-9b6c-2d562c819390" alt="Captura de tela 2025-02-26 172519" width="280" style="margin-right:10px;">
-  <img src="https://github.com/user-attachments/assets/331f55cd-0a17-465a-9765-fdce0dc249c8" alt="Captura de tela 2025-02-26 172712" width="280">
+  <img src="https://github.com/user-attachments/assets/f43d5a96-7159-4374-9b6c-2d562c819390" alt="Captura de tela 2025-02-26 172519" width="290" style="margin-right:10px;">
+  <img src="https://github.com/user-attachments/assets/331f55cd-0a17-465a-9765-fdce0dc249c8" alt="Captura de tela 2025-02-26 172712" width="295">
 </p>
 
 
