@@ -78,10 +78,6 @@ class _PatientAppointmentsViewState extends State<PatientAppointmentsView> with 
           _buildAppointmentsList('cancelled', currentUser),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showScheduleAppointment(context, currentUser),
-        child: const Icon(Icons.add),
-      ),
     );
   }
 

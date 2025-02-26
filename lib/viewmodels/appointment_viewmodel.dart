@@ -68,7 +68,9 @@ class AppointmentViewModel extends ChangeNotifier {
         notes: notes,
       );
 
-      _appointments.add(appointment);
+      // Remove the redundant addition of appointment
+      // _appointments.add(appointment);
+      _appointments = AppointmentService.appointments;
       notifyListeners();
       return true;
     } catch (e) {

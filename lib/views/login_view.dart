@@ -73,7 +73,7 @@ class _LoginViewState extends State<LoginView> {
                 children: [
                   const SizedBox(height: 40),
                   Icon(
-                    Icons.medical_services_rounded,
+                    Icons.local_hospital,
                     size: 80,
                     color: Theme.of(context).primaryColor,
                   ),

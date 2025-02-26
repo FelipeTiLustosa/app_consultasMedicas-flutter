@@ -121,10 +121,7 @@ class AppointmentService {
   static bool isTimeSlotAvailable(String doctorId, DateTime dateTime) {
     return !_appointments.any((appointment) =>
         appointment.doctorId == doctorId &&
-        appointment.dateTime.year == dateTime.year &&
-        appointment.dateTime.month == dateTime.month &&
-        appointment.dateTime.day == dateTime.day &&
-        appointment.dateTime.hour == dateTime.hour &&
+        appointment.dateTime.isAtSameMomentAs(dateTime) &&
         appointment.status != 'cancelled');
   }
 
